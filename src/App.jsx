@@ -48,10 +48,92 @@ const Modal = ({ open, onClose, title, children, w = 560 }) => {
   </div>
 }
 
+// ── Modal Form Components ──
+
+function MetaInvoiceForm({ metaAccounts, config, onClose, onSave }) {
+  const [f, setF] = useState({ account_id: metaAccounts[0]?.id || '', date: today(), amount_usd: '', amount_cop: '', transaction_id: '', invoice_number: '', payment_status: 'pagado', concept: 'Cobro Meta Ads' })
+  const ac = (u) => setF(p => ({ ...p, amount_usd: u, amount_cop: Math.round((parseFloat(u) || 0) * (config.usd_rate || 4200)) }))
+  return <>
+    <Field label="Cuenta"><select style={inp} value={f.account_id} onChange={e => setF({ ...f, account_id: e.target.value })}><option value="">—</option>{metaAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></Field>
+    <Field label="Fecha"><input type="date" style={inp} value={f.date} onChange={e => setF({ ...f, date: e.target.value })} /></Field>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><Field label="USD"><input type="number" style={inp} value={f.amount_usd} onChange={e => ac(e.target.value)} /></Field><Field label="COP"><input type="number" style={inp} value={f.amount_cop} onChange={e => setF({ ...f, amount_cop: e.target.value })} /></Field></div>
+    <Field label="ID Transacción" sub="Ej: JTUVAKZXD2"><input style={{ ...inp, fontFamily: "'DM Mono', monospace", textTransform: 'uppercase' }} value={f.transaction_id} onChange={e => setF({ ...f, transaction_id: e.target.value.toUpperCase() })} /></Field>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><Field label="Nº Factura"><input style={inp} value={f.invoice_number} onChange={e => setF({ ...f, invoice_number: e.target.value })} /></Field><Field label="Estado pago"><select style={inp} value={f.payment_status} onChange={e => setF({ ...f, payment_status: e.target.value })}><option value="pagado">Pagado</option><option value="error">Error</option><option value="pendiente">Pendiente</option></select></Field></div>
+    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}><Btn v="secondary" onClick={onClose}>Cancelar</Btn><Btn onClick={() => onSave({ ...f, platform: 'meta', status: 'nueva', source: 'manual' })} disabled={!f.account_id || !f.amount_cop}>Guardar</Btn></div>
+  </>
+}
+
+function TiktokInvoiceForm({ tiktokAccounts, config, onClose, onSave, onAddAccount }) {
+  const [f, setF] = useState({ account_id: tiktokAccounts[0]?.id || '', date: today(), amount_usd: '', amount_cop: '', transaction_id: '', invoice_number: '', payment_status: 'pagado', concept: 'Cobro TikTok Ads' })
+  const ac = (u) => setF(p => ({ ...p, amount_usd: u, amount_cop: Math.round((parseFloat(u) || 0) * (config.usd_rate || 4200)) }))
+  if (tiktokAccounts.length === 0) return <div style={{ textAlign: 'center', padding: 20 }}><p style={{ color: T.textS, marginBottom: 12 }}>No tienes cuentas TikTok.</p><Btn v="secondary" s="sm" onClick={onAddAccount}>+ Agregar cuenta TikTok</Btn></div>
+  return <>
+    <Field label="Cuenta TikTok"><select style={inp} value={f.account_id} onChange={e => setF({ ...f, account_id: e.target.value })}><option value="">—</option>{tiktokAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></Field>
+    <Field label="Fecha"><input type="date" style={inp} value={f.date} onChange={e => setF({ ...f, date: e.target.value })} /></Field>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><Field label="USD"><input type="number" style={inp} value={f.amount_usd} onChange={e => ac(e.target.value)} /></Field><Field label="COP"><input type="number" style={inp} value={f.amount_cop} onChange={e => setF({ ...f, amount_cop: e.target.value })} /></Field></div>
+    <Field label="ID Transacción TikTok"><input style={{ ...inp, fontFamily: "'DM Mono', monospace", textTransform: 'uppercase' }} value={f.transaction_id} onChange={e => setF({ ...f, transaction_id: e.target.value.toUpperCase() })} /></Field>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><Field label="Nº Factura"><input style={inp} value={f.invoice_number} onChange={e => setF({ ...f, invoice_number: e.target.value })} /></Field><Field label="Estado pago"><select style={inp} value={f.payment_status} onChange={e => setF({ ...f, payment_status: e.target.value })}><option value="pagado">Pagado</option><option value="error">Error</option></select></Field></div>
+    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}><Btn v="secondary" onClick={onClose}>Cancelar</Btn><Btn v="tiktok" onClick={() => onSave({ ...f, platform: 'tiktok', status: 'nueva', source: 'manual' })} disabled={!f.account_id || !f.amount_cop}>Guardar</Btn></div>
+  </>
+}
+
+function EditInvoiceForm({ data, config, onClose, onSave }) {
+  const [f, setF] = useState(data)
+  const ac = (u) => setF(p => ({ ...p, amount_usd: u, amount_cop: Math.round((parseFloat(u) || 0) * (config.usd_rate || 4200)) }))
+  return <>
+    <div style={{ marginBottom: 16 }}><PlatBadge platform={f.platform} /></div>
+    <Field label="Fecha"><input type="date" style={inp} value={f.date} onChange={e => setF({ ...f, date: e.target.value })} /></Field>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><Field label="USD"><input type="number" style={inp} value={f.amount_usd} onChange={e => ac(e.target.value)} /></Field><Field label="COP"><input type="number" style={inp} value={f.amount_cop} onChange={e => setF({ ...f, amount_cop: e.target.value })} /></Field></div>
+    <Field label="ID Transacción"><input style={{ ...inp, fontFamily: "'DM Mono', monospace", textTransform: 'uppercase' }} value={f.transaction_id || ''} onChange={e => setF({ ...f, transaction_id: e.target.value.toUpperCase() })} /></Field>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><Field label="Nº Factura"><input style={inp} value={f.invoice_number || ''} onChange={e => setF({ ...f, invoice_number: e.target.value })} /></Field><Field label="Estado pago"><select style={inp} value={f.payment_status} onChange={e => setF({ ...f, payment_status: e.target.value })}><option value="pagado">Pagado</option><option value="error">Error</option><option value="pendiente">Pendiente</option></select></Field></div>
+    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}><Btn v="secondary" onClick={onClose}>Cancelar</Btn><Btn onClick={() => onSave({ date: f.date, amount_usd: f.amount_usd, amount_cop: f.amount_cop, transaction_id: f.transaction_id, invoice_number: f.invoice_number, payment_status: f.payment_status }, data.id)}>Guardar</Btn></div>
+  </>
+}
+
+function CardForm({ data, onClose, onSave }) {
+  const [f, setF] = useState(data || { name: '', last4: '', bank: '', card_type: 'visa' })
+  return <>
+    <Field label="Nombre"><input style={inp} value={f.name} onChange={e => setF({ ...f, name: e.target.value })} placeholder="Visa Bancolombia" /></Field>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><Field label="Últimos 4"><input style={inp} maxLength={4} value={f.last4} onChange={e => setF({ ...f, last4: e.target.value.replace(/\D/g, '').slice(0, 4) })} /></Field><Field label="Banco"><input style={inp} value={f.bank} onChange={e => setF({ ...f, bank: e.target.value })} /></Field></div>
+    <Field label="Tipo"><select style={inp} value={f.card_type} onChange={e => setF({ ...f, card_type: e.target.value })}><option value="visa">Visa</option><option value="mastercard">Mastercard</option><option value="amex">Amex</option></select></Field>
+    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}><Btn v="secondary" onClick={onClose}>Cancelar</Btn><Btn onClick={() => onSave({ name: f.name, last4: f.last4, bank: f.bank, card_type: f.card_type }, data?.id)} disabled={!f.name || !f.last4}>Guardar</Btn></div>
+  </>
+}
+
+function MetaAcctForm({ data, cards, onClose, onSave }) {
+  const [f, setF] = useState(data || { name: '', ad_account_id: '', credit_card_id: '', platform: 'meta' })
+  return <>
+    <Field label="Nombre"><input style={inp} value={f.name} onChange={e => setF({ ...f, name: e.target.value })} placeholder="Doral Store — Principal" /></Field>
+    <Field label="Ad Account ID" sub="act_XXXXXXXX"><input style={inp} value={f.ad_account_id} onChange={e => setF({ ...f, ad_account_id: e.target.value })} /></Field>
+    <Field label="Tarjeta"><select style={inp} value={f.credit_card_id} onChange={e => setF({ ...f, credit_card_id: e.target.value })}><option value="">—</option>{cards.map(c => <option key={c.id} value={c.id}>{c.name} ••{c.last4}</option>)}</select></Field>
+    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}><Btn v="secondary" onClick={onClose}>Cancelar</Btn><Btn onClick={() => onSave({ name: f.name, ad_account_id: f.ad_account_id, credit_card_id: f.credit_card_id || null, platform: 'meta' }, data?.id)} disabled={!f.name}>Guardar</Btn></div>
+  </>
+}
+
+function TiktokAcctForm({ data, cards, onClose, onSave }) {
+  const [f, setF] = useState(data || { name: '', ad_account_id: '', credit_card_id: '', platform: 'tiktok' })
+  return <>
+    <Field label="Nombre"><input style={inp} value={f.name} onChange={e => setF({ ...f, name: e.target.value })} placeholder="TikTok — Doral Store" /></Field>
+    <Field label="Advertiser ID"><input style={inp} value={f.ad_account_id} onChange={e => setF({ ...f, ad_account_id: e.target.value })} /></Field>
+    <Field label="Tarjeta"><select style={inp} value={f.credit_card_id} onChange={e => setF({ ...f, credit_card_id: e.target.value })}><option value="">—</option>{cards.map(c => <option key={c.id} value={c.id}>{c.name} ••{c.last4}</option>)}</select></Field>
+    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}><Btn v="secondary" onClick={onClose}>Cancelar</Btn><Btn v="tiktok" onClick={() => onSave({ name: f.name, ad_account_id: f.ad_account_id, credit_card_id: f.credit_card_id || null, platform: 'tiktok' }, data?.id)} disabled={!f.name}>Guardar</Btn></div>
+  </>
+}
+
+function WithdrawForm({ batch, cardLabel, onClose, onConfirm }) {
+  const [ref, setRef] = useState('')
+  if (!batch) return null
+  return <>
+    <p style={{ fontSize: 14, color: T.textS, margin: '0 0 16px' }}>Lote por <strong style={{ color: T.text }}>{fmt(batch.total)}</strong> a <strong>{cardLabel(batch.credit_card_id)}</strong></p>
+    <Field label="Referencia Dropi"><input style={inp} value={ref} onChange={e => setRef(e.target.value)} placeholder="DRP-12345" /></Field>
+    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}><Btn v="secondary" onClick={onClose}>Cancelar</Btn><Btn onClick={() => onConfirm(batch.id, ref)}>Confirmar</Btn></div>
+  </>
+}
+
 // ═══════════════════════════════════════
 // LOGIN PAGE
 // ═══════════════════════════════════════
-function LoginPage({ onAuth }) {
+function LoginPage() {
   const [email, setEmail] = useState('')
   const [pass, setPass] = useState('')
   const [loading, setLoading] = useState(false)
@@ -67,7 +149,6 @@ function LoginPage({ onAuth }) {
       } else {
         const { error } = await supabase.auth.signUp({ email, password: pass })
         if (error) throw error
-        // Auto-create user_config
         const { data: { user } } = await supabase.auth.getUser()
         if (user) await supabase.from('user_config').upsert({ user_id: user.id, meta_token: '', usd_rate: 4200 })
       }
@@ -91,7 +172,7 @@ function LoginPage({ onAuth }) {
           <Field label="Correo electrónico"><input style={inp} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="tu@email.com" required /></Field>
           <Field label="Contraseña"><input style={inp} type="password" value={pass} onChange={e => setPass(e.target.value)} placeholder="••••••••" required minLength={6} /></Field>
           {error && <p style={{ color: T.red, fontSize: 13, margin: '0 0 16px', padding: '8px 12px', background: T.redBg, borderRadius: 8 }}>{error}</p>}
-          <Btn onClick={() => {}} style={{ width: '100%', justifyContent: 'center', padding: '12px 0' }} disabled={loading}>
+          <Btn style={{ width: '100%', justifyContent: 'center', padding: '12px 0' }} disabled={loading}>
             {loading ? 'Cargando...' : mode === 'login' ? 'Iniciar sesión' : 'Crear cuenta'}
           </Btn>
         </form>
@@ -125,7 +206,6 @@ function Dashboard({ user }) {
   const [search, setSearch] = useState('')
   const [dataLoaded, setDataLoaded] = useState(false)
 
-  // ── Load all data ──
   const loadData = useCallback(async () => {
     const [c, a, i, b, cfg] = await Promise.all([
       supabase.from('credit_cards').select('*').order('created_at'),
@@ -145,7 +225,6 @@ function Dashboard({ user }) {
 
   useEffect(() => { loadData() }, [loadData])
 
-  // ── Helpers ──
   const acctName = id => accounts.find(a => a.id === id)?.name || '—'
   const cardLabel = id => { const c = cards.find(x => x.id === id); return c ? `${c.name} ••${c.last4}` : '—' }
   const cardForAccount = acctId => { const a = accounts.find(x => x.id === acctId); return a ? cards.find(c => c.id === a.credit_card_id) : null }
@@ -166,7 +245,6 @@ function Dashboard({ user }) {
   const metaAccounts = accounts.filter(a => a.platform === 'meta')
   const tiktokAccounts = accounts.filter(a => a.platform === 'tiktok')
 
-  // ── META SYNC ──
   const syncMeta = async () => {
     if (!config.meta_token) { setSyncMsg('⚠ Configura tu token'); return }
     const metaAccts = accounts.filter(a => a.platform === 'meta' && a.ad_account_id)
@@ -205,7 +283,6 @@ function Dashboard({ user }) {
     setSyncing(false); loadData()
   }
 
-  // ── CREATE BATCH ──
   const createBatch = async (cardId) => {
     const ids = [...selected].filter(id => {
       const inv = invoices.find(i => i.id === id)
@@ -233,7 +310,6 @@ function Dashboard({ user }) {
     loadData()
   }
 
-  // ── CRUD helpers ──
   const saveCard = async (f, editId) => {
     if (editId) await supabase.from('credit_cards').update(f).eq('id', editId)
     else await supabase.from('credit_cards').insert({ ...f, user_id: user.id })
@@ -538,84 +614,34 @@ function Dashboard({ user }) {
 
       {/* ═══ MODALS ═══ */}
 
-      {/* Add Meta Invoice */}
       <Modal open={modal === 'addMeta'} onClose={() => setModal(null)} title="Ⓜ Cobro Meta Ads">
-        {(() => { const [f, setF] = useState({ account_id: metaAccounts[0]?.id || '', date: today(), amount_usd: '', amount_cop: '', transaction_id: '', invoice_number: '', payment_status: 'pagado', concept: 'Cobro Meta Ads' }); const ac = (u) => setF(p => ({ ...p, amount_usd: u, amount_cop: Math.round((parseFloat(u) || 0) * (config.usd_rate || 4200)) })); return <>
-          <Field label="Cuenta"><select style={inp} value={f.account_id} onChange={e => setF({ ...f, account_id: e.target.value })}><option value="">—</option>{metaAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></Field>
-          <Field label="Fecha"><input type="date" style={inp} value={f.date} onChange={e => setF({ ...f, date: e.target.value })} /></Field>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><Field label="USD"><input type="number" style={inp} value={f.amount_usd} onChange={e => ac(e.target.value)} /></Field><Field label="COP"><input type="number" style={inp} value={f.amount_cop} onChange={e => setF({ ...f, amount_cop: e.target.value })} /></Field></div>
-          <Field label="ID Transacción" sub="Ej: JTUVAKZXD2"><input style={{ ...inp, fontFamily: "'DM Mono', monospace", textTransform: 'uppercase' }} value={f.transaction_id} onChange={e => setF({ ...f, transaction_id: e.target.value.toUpperCase() })} /></Field>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><Field label="Nº Factura"><input style={inp} value={f.invoice_number} onChange={e => setF({ ...f, invoice_number: e.target.value })} /></Field><Field label="Estado pago"><select style={inp} value={f.payment_status} onChange={e => setF({ ...f, payment_status: e.target.value })}><option value="pagado">Pagado</option><option value="error">Error</option><option value="pendiente">Pendiente</option></select></Field></div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}><Btn v="secondary" onClick={() => setModal(null)}>Cancelar</Btn><Btn onClick={() => { saveInvoice({ ...f, platform: 'meta', status: 'nueva', source: 'manual' }); }} disabled={!f.account_id || !f.amount_cop}>Guardar</Btn></div>
-        </> })()}
+        <MetaInvoiceForm metaAccounts={metaAccounts} config={config} onClose={() => setModal(null)} onSave={saveInvoice} />
       </Modal>
 
-      {/* Add TikTok Invoice */}
       <Modal open={modal === 'addTiktok'} onClose={() => setModal(null)} title="♪ Cobro TikTok Ads">
-        {(() => { const [f, setF] = useState({ account_id: tiktokAccounts[0]?.id || '', date: today(), amount_usd: '', amount_cop: '', transaction_id: '', invoice_number: '', payment_status: 'pagado', concept: 'Cobro TikTok Ads' }); const ac = (u) => setF(p => ({ ...p, amount_usd: u, amount_cop: Math.round((parseFloat(u) || 0) * (config.usd_rate || 4200)) })); return <>
-          {tiktokAccounts.length === 0 ? <div style={{ textAlign: 'center', padding: 20 }}><p style={{ color: T.textS, marginBottom: 12 }}>No tienes cuentas TikTok.</p><Btn v="secondary" s="sm" onClick={() => { setModal(null); setTimeout(() => setModal('addTiktokAcct'), 200) }}>+ Agregar cuenta TikTok</Btn></div> : <>
-            <Field label="Cuenta TikTok"><select style={inp} value={f.account_id} onChange={e => setF({ ...f, account_id: e.target.value })}><option value="">—</option>{tiktokAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></Field>
-            <Field label="Fecha"><input type="date" style={inp} value={f.date} onChange={e => setF({ ...f, date: e.target.value })} /></Field>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><Field label="USD"><input type="number" style={inp} value={f.amount_usd} onChange={e => ac(e.target.value)} /></Field><Field label="COP"><input type="number" style={inp} value={f.amount_cop} onChange={e => setF({ ...f, amount_cop: e.target.value })} /></Field></div>
-            <Field label="ID Transacción TikTok"><input style={{ ...inp, fontFamily: "'DM Mono', monospace", textTransform: 'uppercase' }} value={f.transaction_id} onChange={e => setF({ ...f, transaction_id: e.target.value.toUpperCase() })} /></Field>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><Field label="Nº Factura"><input style={inp} value={f.invoice_number} onChange={e => setF({ ...f, invoice_number: e.target.value })} /></Field><Field label="Estado pago"><select style={inp} value={f.payment_status} onChange={e => setF({ ...f, payment_status: e.target.value })}><option value="pagado">Pagado</option><option value="error">Error</option></select></Field></div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}><Btn v="secondary" onClick={() => setModal(null)}>Cancelar</Btn><Btn v="tiktok" onClick={() => { saveInvoice({ ...f, platform: 'tiktok', status: 'nueva', source: 'manual' }); }} disabled={!f.account_id || !f.amount_cop}>Guardar</Btn></div>
-          </>}
-        </> })()}
+        <TiktokInvoiceForm tiktokAccounts={tiktokAccounts} config={config} onClose={() => setModal(null)} onSave={saveInvoice} onAddAccount={() => { setModal(null); setTimeout(() => setModal('addTiktokAcct'), 200) }} />
       </Modal>
 
-      {/* Edit Invoice */}
       <Modal open={modal?.type === 'editInv'} onClose={() => setModal(null)} title="Editar Factura">
-        {(() => { const d = modal?.data; if (!d) return null; const [f, setF] = useState(d); const ac = (u) => setF(p => ({ ...p, amount_usd: u, amount_cop: Math.round((parseFloat(u) || 0) * (config.usd_rate || 4200)) })); return <>
-          <div style={{ marginBottom: 16 }}><PlatBadge platform={f.platform} /></div>
-          <Field label="Fecha"><input type="date" style={inp} value={f.date} onChange={e => setF({ ...f, date: e.target.value })} /></Field>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><Field label="USD"><input type="number" style={inp} value={f.amount_usd} onChange={e => ac(e.target.value)} /></Field><Field label="COP"><input type="number" style={inp} value={f.amount_cop} onChange={e => setF({ ...f, amount_cop: e.target.value })} /></Field></div>
-          <Field label="ID Transacción"><input style={{ ...inp, fontFamily: "'DM Mono', monospace", textTransform: 'uppercase' }} value={f.transaction_id || ''} onChange={e => setF({ ...f, transaction_id: e.target.value.toUpperCase() })} /></Field>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><Field label="Nº Factura"><input style={inp} value={f.invoice_number || ''} onChange={e => setF({ ...f, invoice_number: e.target.value })} /></Field><Field label="Estado pago"><select style={inp} value={f.payment_status} onChange={e => setF({ ...f, payment_status: e.target.value })}><option value="pagado">Pagado</option><option value="error">Error</option><option value="pendiente">Pendiente</option></select></Field></div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}><Btn v="secondary" onClick={() => setModal(null)}>Cancelar</Btn><Btn onClick={() => saveInvoice({ date: f.date, amount_usd: f.amount_usd, amount_cop: f.amount_cop, transaction_id: f.transaction_id, invoice_number: f.invoice_number, payment_status: f.payment_status }, d.id)}>Guardar</Btn></div>
-        </> })()}
+        {modal?.data && <EditInvoiceForm data={modal.data} config={config} onClose={() => setModal(null)} onSave={saveInvoice} />}
       </Modal>
 
-      {/* Add/Edit Card */}
       <Modal open={modal === 'addCard' || modal?.type === 'editCard'} onClose={() => setModal(null)} title={modal?.type === 'editCard' ? 'Editar Tarjeta' : 'Nueva Tarjeta'}>
-        {(() => { const d = modal?.data; const [f, setF] = useState(d || { name: '', last4: '', bank: '', card_type: 'visa' }); return <>
-          <Field label="Nombre"><input style={inp} value={f.name} onChange={e => setF({ ...f, name: e.target.value })} placeholder="Visa Bancolombia" /></Field>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><Field label="Últimos 4"><input style={inp} maxLength={4} value={f.last4} onChange={e => setF({ ...f, last4: e.target.value.replace(/\D/g, '').slice(0, 4) })} /></Field><Field label="Banco"><input style={inp} value={f.bank} onChange={e => setF({ ...f, bank: e.target.value })} /></Field></div>
-          <Field label="Tipo"><select style={inp} value={f.card_type} onChange={e => setF({ ...f, card_type: e.target.value })}><option value="visa">Visa</option><option value="mastercard">Mastercard</option><option value="amex">Amex</option></select></Field>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}><Btn v="secondary" onClick={() => setModal(null)}>Cancelar</Btn><Btn onClick={() => saveCard({ name: f.name, last4: f.last4, bank: f.bank, card_type: f.card_type }, d?.id)} disabled={!f.name || !f.last4}>Guardar</Btn></div>
-        </> })()}
+        <CardForm data={modal?.data} onClose={() => setModal(null)} onSave={saveCard} />
       </Modal>
 
-      {/* Add Meta Account */}
       <Modal open={modal === 'addMetaAcct' || (modal?.type === 'editAcct' && modal.data?.platform === 'meta')} onClose={() => setModal(null)} title={modal?.type === 'editAcct' ? 'Editar Cuenta Meta' : 'Nueva Cuenta Meta'}>
-        {(() => { const d = modal?.data; const [f, setF] = useState(d || { name: '', ad_account_id: '', credit_card_id: '', platform: 'meta' }); return <>
-          <Field label="Nombre"><input style={inp} value={f.name} onChange={e => setF({ ...f, name: e.target.value })} placeholder="Doral Store — Principal" /></Field>
-          <Field label="Ad Account ID" sub="act_XXXXXXXX"><input style={inp} value={f.ad_account_id} onChange={e => setF({ ...f, ad_account_id: e.target.value })} /></Field>
-          <Field label="Tarjeta"><select style={inp} value={f.credit_card_id} onChange={e => setF({ ...f, credit_card_id: e.target.value })}><option value="">—</option>{cards.map(c => <option key={c.id} value={c.id}>{c.name} ••{c.last4}</option>)}</select></Field>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}><Btn v="secondary" onClick={() => setModal(null)}>Cancelar</Btn><Btn onClick={() => saveAccount({ name: f.name, ad_account_id: f.ad_account_id, credit_card_id: f.credit_card_id || null, platform: 'meta' }, d?.id)} disabled={!f.name}>Guardar</Btn></div>
-        </> })()}
+        <MetaAcctForm data={modal?.data} cards={cards} onClose={() => setModal(null)} onSave={saveAccount} />
       </Modal>
 
-      {/* Add TikTok Account */}
       <Modal open={modal === 'addTiktokAcct' || (modal?.type === 'editAcct' && modal.data?.platform === 'tiktok')} onClose={() => setModal(null)} title={modal?.type === 'editAcct' ? 'Editar Cuenta TikTok' : '♪ Nueva Cuenta TikTok'}>
-        {(() => { const d = modal?.data; const [f, setF] = useState(d || { name: '', ad_account_id: '', credit_card_id: '', platform: 'tiktok' }); return <>
-          <Field label="Nombre"><input style={inp} value={f.name} onChange={e => setF({ ...f, name: e.target.value })} placeholder="TikTok — Doral Store" /></Field>
-          <Field label="Advertiser ID"><input style={inp} value={f.ad_account_id} onChange={e => setF({ ...f, ad_account_id: e.target.value })} /></Field>
-          <Field label="Tarjeta"><select style={inp} value={f.credit_card_id} onChange={e => setF({ ...f, credit_card_id: e.target.value })}><option value="">—</option>{cards.map(c => <option key={c.id} value={c.id}>{c.name} ••{c.last4}</option>)}</select></Field>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}><Btn v="secondary" onClick={() => setModal(null)}>Cancelar</Btn><Btn v="tiktok" onClick={() => saveAccount({ name: f.name, ad_account_id: f.ad_account_id, credit_card_id: f.credit_card_id || null, platform: 'tiktok' }, d?.id)} disabled={!f.name}>Guardar</Btn></div>
-        </> })()}
+        <TiktokAcctForm data={modal?.data} cards={cards} onClose={() => setModal(null)} onSave={saveAccount} />
       </Modal>
 
-      {/* Mark Withdrawn */}
       <Modal open={modal?.type === 'withdraw'} onClose={() => setModal(null)} title="Registrar Retiro">
-        {(() => { const [ref, setRef] = useState(''); if (!modal?.batch) return null; return <>
-          <p style={{ fontSize: 14, color: T.textS, margin: '0 0 16px' }}>Lote por <strong style={{ color: T.text }}>{fmt(modal.batch.total)}</strong> a <strong>{cardLabel(modal.batch.credit_card_id)}</strong></p>
-          <Field label="Referencia Dropi"><input style={inp} value={ref} onChange={e => setRef(e.target.value)} placeholder="DRP-12345" /></Field>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}><Btn v="secondary" onClick={() => setModal(null)}>Cancelar</Btn><Btn onClick={() => markWithdrawn(modal.batch.id, ref)}>Confirmar</Btn></div>
-        </> })()}
+        <WithdrawForm batch={modal?.batch} cardLabel={cardLabel} onClose={() => setModal(null)} onConfirm={markWithdrawn} />
       </Modal>
 
-      {/* Batch Created */}
       <Modal open={modal?.type === 'batchCreated'} onClose={() => setModal(null)} title="Lote Creado ✓" w={420}>
         {modal?.batch && <div style={{ textAlign: 'center' }}>
           <p style={{ fontSize: 36, margin: '0 0 12px' }}>📦</p>
