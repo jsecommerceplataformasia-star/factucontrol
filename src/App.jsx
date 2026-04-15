@@ -245,42 +245,85 @@ function Dashboard({ user }) {
   const metaAccounts = accounts.filter(a => a.platform === 'meta')
   const tiktokAccounts = accounts.filter(a => a.platform === 'tiktok')
 
+  const autoDetectCard = async (fundingSource) => {
+    if (!fundingSource?.display_string) return null
+    const match = fundingSource.display_string.match(/\d{4}/)
+    const last4 = match ? match[0] : null
+    if (!last4) return null
+    const cardType = fundingSource.display_string.toLowerCase().includes('mastercard') ? 'mastercard'
+      : fundingSource.display_string.toLowerCase().includes('amex') ? 'amex' : 'visa'
+    const { data: existing } = await supabase.from('credit_cards').select('id').eq('user_id', user.id).eq('last4', last4).single()
+    if (existing) return existing.id
+    const { data: newCard } = await supabase.from('credit_cards')
+      .insert({ user_id: user.id, name: fundingSource.display_string, last4, bank: '', card_type: cardType })
+      .select().single()
+    return newCard?.id || null
+  }
+
   const syncMeta = async () => {
     if (!config.meta_token) { setSyncMsg('⚠ Configura tu token'); return }
-    const metaAccts = accounts.filter(a => a.platform === 'meta' && a.ad_account_id)
-    if (!metaAccts.length) { setSyncMsg('⚠ Sin cuentas Meta con ID'); return }
     setSyncing(true); let added = 0, errors = []
-    const since = daysAgo(14), until = today()
 
-    for (const acct of metaAccts) {
-      const actId = acct.ad_account_id.startsWith('act_') ? acct.ad_account_id : `act_${acct.ad_account_id}`
-      setSyncMsg(`Leyendo ${acct.name}...`)
+    // Paso 1: Descubrir todas las cuentas publicitarias del token
+    setSyncMsg('Descubriendo cuentas...')
+    let metaAcctsList = []
+    try {
+      const discoverUrl = `${GQL}/me/adaccounts?fields=id,name,account_status,funding_source_details&limit=100&access_token=${config.meta_token}`
+      const discoverRes = await fetch(discoverUrl)
+      const discoverData = await discoverRes.json()
+      if (discoverData.error) { setSyncMsg(`⚠ ${discoverData.error.message}`); setSyncing(false); return }
+      metaAcctsList = (discoverData.data || []).filter(a => a.account_status === 1)
+    } catch (err) { setSyncMsg(`⚠ ${err.message}`); setSyncing(false); return }
+
+    // Paso 2: Auto-crear tarjetas y cuentas si no existen
+    setSyncMsg(`${metaAcctsList.length} cuentas encontradas, sincronizando...`)
+    const accountMap = {}
+    for (const metaAcct of metaAcctsList) {
+      const actId = metaAcct.id.startsWith('act_') ? metaAcct.id : `act_${metaAcct.id}`
+      const cardId = await autoDetectCard(metaAcct.funding_source_details)
+      const { data: existing } = await supabase.from('ad_accounts').select('id, credit_card_id').eq('user_id', user.id).eq('ad_account_id', actId).single()
+      if (existing) {
+        accountMap[actId] = existing.id
+        if (cardId && !existing.credit_card_id)
+          await supabase.from('ad_accounts').update({ credit_card_id: cardId }).eq('id', existing.id)
+      } else {
+        const { data: newAcct } = await supabase.from('ad_accounts')
+          .insert({ user_id: user.id, name: metaAcct.name, ad_account_id: actId, platform: 'meta', credit_card_id: cardId })
+          .select().single()
+        if (newAcct) accountMap[actId] = newAcct.id
+      }
+    }
+
+    // Paso 3: Sincronizar gastos de los últimos 14 días
+    const since = daysAgo(14), until = today()
+    for (const [actId, accountDbId] of Object.entries(accountMap)) {
+      const acctName = metaAcctsList.find(a => (a.id.startsWith('act_') ? a.id : `act_${a.id}`) === actId)?.name || actId
+      setSyncMsg(`Leyendo ${acctName}...`)
       try {
         const url = `${GQL}/${actId}/insights?fields=spend,account_currency&time_range={"since":"${since}","until":"${until}"}&time_increment=1&access_token=${config.meta_token}`
         const res = await fetch(url); const data = await res.json()
-        if (data.error) { errors.push(`${acct.name}: ${data.error.message}`); continue }
-        if (data.data) {
-          for (const day of data.data) {
-            const spend = parseFloat(day.spend) || 0
-            if (spend === 0) continue
-            const currency = day.account_currency || 'USD'
-            const isCOP = currency === 'COP'
-            const amountCop = isCOP ? Math.round(spend) : Math.round(spend * (config.usd_rate || 4200))
-            const amountUsd = isCOP ? +(spend / (config.usd_rate || 4200)).toFixed(2) : spend
-            const syncKey = `${actId}_${day.date_start}`
-            const { data: existing } = await supabase.from('invoices').select('id').eq('meta_sync_key', syncKey).single()
-            if (existing) continue
-            const { error: insertErr } = await supabase.from('invoices').insert({
-              user_id: user.id, account_id: acct.id, platform: 'meta', date: day.date_start,
-              amount_usd: amountUsd, amount_cop: amountCop,
-              currency, concept: `Gasto publicitario ${day.date_start}`,
-              payment_status: 'pagado', status: 'nueva', source: 'api', meta_sync_key: syncKey,
-            })
-            if (!insertErr) added++
-          }
+        if (data.error) { errors.push(`${acctName}: ${data.error.message}`); continue }
+        for (const day of data.data || []) {
+          const spend = parseFloat(day.spend) || 0
+          if (spend === 0) continue
+          const currency = day.account_currency || 'COP'
+          const isCOP = currency === 'COP'
+          const amountCop = isCOP ? Math.round(spend) : Math.round(spend * (config.usd_rate || 4200))
+          const amountUsd = isCOP ? +(spend / (config.usd_rate || 4200)).toFixed(2) : spend
+          const syncKey = `${actId}_${day.date_start}`
+          const { data: existing } = await supabase.from('invoices').select('id').eq('meta_sync_key', syncKey).single()
+          if (existing) continue
+          const { error: insertErr } = await supabase.from('invoices').insert({
+            user_id: user.id, account_id: accountDbId, platform: 'meta', date: day.date_start,
+            amount_usd: amountUsd, amount_cop: amountCop, currency,
+            concept: `Gasto publicitario ${day.date_start}`,
+            payment_status: 'pagado', status: 'nueva', source: 'api', meta_sync_key: syncKey,
+          })
+          if (!insertErr) added++
         }
-      } catch (err) { errors.push(`${acct.name}: ${err.message}`) }
+      } catch (err) { errors.push(`${acctName}: ${err.message}`) }
     }
+
     await supabase.from('user_config').update({ last_sync: new Date().toISOString() }).eq('user_id', user.id)
     await supabase.from('sync_log').insert({ user_id: user.id, added, errors })
     setSyncMsg(errors.length ? `${added} nuevas · ${errors.length} error(es)` : `✓ ${added} facturas nuevas`)
