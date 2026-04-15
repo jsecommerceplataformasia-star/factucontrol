@@ -261,15 +261,19 @@ function Dashboard({ user }) {
         if (data.error) { errors.push(`${acct.name}: ${data.error.message}`); continue }
         if (data.data) {
           for (const day of data.data) {
-            const spendUSD = parseFloat(day.spend) || 0
-            if (spendUSD === 0) continue
+            const spend = parseFloat(day.spend) || 0
+            if (spend === 0) continue
+            const currency = day.account_currency || 'USD'
+            const isCOP = currency === 'COP'
+            const amountCop = isCOP ? Math.round(spend) : Math.round(spend * (config.usd_rate || 4200))
+            const amountUsd = isCOP ? +(spend / (config.usd_rate || 4200)).toFixed(2) : spend
             const syncKey = `${actId}_${day.date_start}`
             const { data: existing } = await supabase.from('invoices').select('id').eq('meta_sync_key', syncKey).single()
             if (existing) continue
             const { error: insertErr } = await supabase.from('invoices').insert({
               user_id: user.id, account_id: acct.id, platform: 'meta', date: day.date_start,
-              amount_usd: spendUSD, amount_cop: Math.round(spendUSD * (config.usd_rate || 4200)),
-              currency: day.account_currency || 'USD', concept: `Gasto publicitario ${day.date_start}`,
+              amount_usd: amountUsd, amount_cop: amountCop,
+              currency, concept: `Gasto publicitario ${day.date_start}`,
               payment_status: 'pagado', status: 'nueva', source: 'api', meta_sync_key: syncKey,
             })
             if (!insertErr) added++
