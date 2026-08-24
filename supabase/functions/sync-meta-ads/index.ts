@@ -19,7 +19,8 @@ function daysAgo(n: number) {
 
 async function autoDetectCard(userId: string, fundingSource: Record<string, string> | null, usdRate: number) {
   if (!fundingSource?.display_string) return null
-  const match = fundingSource.display_string.match(/\d{4}/)
+  const allMatches = fundingSource.display_string.match(/\d{4}/g)
+  const match = allMatches ? [allMatches[allMatches.length - 1]] : null
   const last4 = match ? match[0] : null
   if (!last4) return null
 
@@ -116,46 +117,59 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Paso 3: Sincronizar gastos (últimos 3 días para capturar datos tardíos)
-    const since = daysAgo(3)
+    // Paso 3: Sincronizar cobros reales a la tarjeta (transactions, no insights)
+    const since = daysAgo(30)
     const until = today()
 
     for (const [actId, accountDbId] of Object.entries(accountMap)) {
       try {
-        const url = `${GQL}/${actId}/insights?fields=spend,account_currency&time_range={"since":"${since}","until":"${until}"}&time_increment=1&access_token=${config.meta_token}`
-        const res = await fetch(url)
-        const data = await res.json()
+        let nextUrl: string | null = `${GQL}/${actId}/transactions?fields=id,amount,currency,status,time_created&time_range={"since":"${since}","until":"${until}"}&limit=100&access_token=${config.meta_token}`
+        while (nextUrl) {
+          const res = await fetch(nextUrl)
+          const data = await res.json()
 
-        if (data.error) { errors.push(`${actId}: ${data.error.message}`); continue }
+          if (data.error) { errors.push(`${actId}: ${data.error.message}`); break }
 
-        for (const day of data.data || []) {
-          const spend = parseFloat(day.spend) || 0
-          if (spend === 0) continue
+          for (const tx of (data.data || []) as Record<string, unknown>[]) {
+            // Solo cobros exitosos — ignorar errores/fallos
+            const s = String(tx.status).toUpperCase()
+            if (s !== 'SETTLED' && s !== '1' && s !== 'SUCCESS' && s !== 'SUCCESSFUL') continue
 
-          const currency = day.account_currency || 'COP'
-          const isCOP = currency === 'COP'
-          const amountCop = isCOP ? Math.round(spend) : Math.round(spend * usdRate)
-          const amountUsd = isCOP ? parseFloat((spend / usdRate).toFixed(2)) : spend
-          const syncKey = `${actId}_${day.date_start}`
+            const amount = parseFloat(String(tx.amount)) || 0
+            if (amount === 0) continue
 
-          const { data: existing } = await supabase.from('invoices').select('id').eq('meta_sync_key', syncKey).single()
-          if (existing) continue
+            // Dedup por transaction_id único de Meta
+            const { data: existing } = await supabase.from('invoices').select('id').eq('transaction_id', String(tx.id)).single()
+            if (existing) continue
 
-          const { error: insertErr } = await supabase.from('invoices').insert({
-            user_id: config.user_id,
-            account_id: accountDbId,
-            platform: 'meta',
-            date: day.date_start,
-            amount_usd: amountUsd,
-            amount_cop: amountCop,
-            currency,
-            concept: `Gasto publicitario ${day.date_start}`,
-            payment_status: 'pagado',
-            status: 'nueva',
-            source: 'auto_sync',
-            meta_sync_key: syncKey,
-          })
-          if (!insertErr) added++
+            const currency = (tx.currency as string) || 'COP'
+            const isCOP = currency === 'COP'
+            const amountCop = isCOP ? Math.round(amount) : Math.round(amount * usdRate)
+            const amountUsd = isCOP ? parseFloat((amount / usdRate).toFixed(2)) : amount
+
+            const tc = tx.time_created
+            const date = typeof tc === 'number'
+              ? new Date((tc as number) * 1000).toISOString().split('T')[0]
+              : String(tc || '').slice(0, 10)
+
+            const { error: insertErr } = await supabase.from('invoices').insert({
+              user_id: config.user_id,
+              account_id: accountDbId,
+              platform: 'meta',
+              date,
+              amount_usd: amountUsd,
+              amount_cop: amountCop,
+              currency,
+              concept: 'Cobro Meta Ads',
+              payment_status: 'pagado',
+              status: 'nueva',
+              source: 'api',
+              transaction_id: String(tx.id),
+              meta_sync_key: `${actId}_${tx.id}`,
+            })
+            if (!insertErr) added++
+          }
+          nextUrl = ((data.paging as Record<string, string>) || {})?.next || null
         }
       } catch (err) {
         errors.push(`${actId}: ${(err as Error).message}`)
