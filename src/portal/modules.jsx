@@ -14,6 +14,8 @@ import ImportarDatos from './screens/ImportarDatos.jsx'
 import DashboardFinanciero from './screens/DashboardFinanciero.jsx'
 import RegistroPauta from './screens/RegistroPauta.jsx'
 import CostosFijos from './screens/CostosFijos.jsx'
+import PYG from './screens/PYG.jsx'
+import Inventario from './screens/Inventario.jsx'
 
 // ── Iconos (SVG en línea, heredan color y tamaño) ──────────────────────────
 const svg = (paths) => function Icon({ size = 18 }) {
@@ -107,10 +109,8 @@ export const MODULES = [
       { key: 'adm-fijos',     label: 'Costos Fijos', icon: Icons.lotes, render: CostosFijos },
       { key: 'adm-fvsv',      label: 'Fijos vs Variables', icon: Icons.gastos, render: null, fuente: 'calculado sobre gastos',
         descripcion: 'Cuánto de tu costo es estructura y cuánto se mueve con la venta. Se calcula en vivo desde el tipo de cada gasto.' },
-      { key: 'adm-pyg',       label: 'Pérdidas y Ganancias', icon: Icons.pedidos, render: null, fuente: 'calculado',
-        descripcion: 'P&G mes a mes conectando venta, costo de producto, pauta, fijos y variables.' },
-      { key: 'adm-inventario',label: 'Inventario', icon: Icons.bodegas, render: null, fuente: 'calculado',
-        descripcion: 'Inventario valorizado: inicial, compras de importación y salidas por mes.' },
+      { key: 'adm-pyg',       label: 'Pérdidas y Ganancias', icon: Icons.pedidos, render: PYG },
+      { key: 'adm-inventario',label: 'Inventario', icon: Icons.bodegas, render: Inventario },
       { key: 'adm-catalogos', label: 'Catálogos', icon: Icons.config, render: null, fuente: 'catalogos · 103 valores',
         descripcion: 'Las listas maestras del Excel: categorías, bancos y tarjetas, estados, tipos de gasto, plataformas, cuentas publicitarias y productos.' },
       { key: 'adm-usuarios',  label: 'Usuarios y Roles', icon: Icons.usuarios, render: null, fuente: 'profiles',
