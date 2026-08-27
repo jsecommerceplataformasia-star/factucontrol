@@ -11,6 +11,9 @@ import FactucontrolApp from '../App.jsx'
 import { embed } from './Embed.jsx'
 import RegistroGastos from './screens/RegistroGastos.jsx'
 import ImportarDatos from './screens/ImportarDatos.jsx'
+import DashboardFinanciero from './screens/DashboardFinanciero.jsx'
+import RegistroPauta from './screens/RegistroPauta.jsx'
+import CostosFijos from './screens/CostosFijos.jsx'
 
 // ── Iconos (SVG en línea, heredan color y tamaño) ──────────────────────────
 const svg = (paths) => function Icon({ size = 18 }) {
@@ -97,14 +100,11 @@ export const MODULES = [
     items: [
       // Estructura calcada del Excel "CONTROL FINANCIERO 2026 · DORAL STORE".
       // Hojas de captura → tablas. Hojas de resumen → se calculan en la app.
-      { key: 'adm-dashboard', label: 'Dashboard Financiero', icon: Icons.pauta, render: null, fuente: 'gastos + pauta_pagos',
-        descripcion: 'Vista ejecutiva: gastos operativos, inversión en pauta, costo total de la empresa y pendientes por pagar.' },
+      { key: 'adm-dashboard', label: 'Dashboard Financiero', icon: Icons.pauta, render: DashboardFinanciero },
       // Primera pantalla de captura real: formulario, tabla, edición y soporte adjunto.
       { key: 'adm-gastos',    label: 'Registro de Gastos', icon: Icons.facturas, render: RegistroGastos },
-      { key: 'adm-pauta',     label: 'Registro de Pauta', icon: Icons.tarjetas, render: null, fuente: 'pauta_pagos · 828 registros',
-        descripcion: 'Cada pago de Meta, TikTok, cuota de manejo y wallet Dropi, con cuenta publicitaria, ID de transacción y tarjeta usada.' },
-      { key: 'adm-fijos',     label: 'Costos Fijos', icon: Icons.lotes, render: null, fuente: 'costos_fijos · 106 registros',
-        descripcion: 'Base fija mensual por concepto y grupo: nómina, instalaciones, software, financieros. Con promedio mensual y mes más alto.' },
+      { key: 'adm-pauta',     label: 'Registro de Pauta', icon: Icons.tarjetas, render: RegistroPauta },
+      { key: 'adm-fijos',     label: 'Costos Fijos', icon: Icons.lotes, render: CostosFijos },
       { key: 'adm-fvsv',      label: 'Fijos vs Variables', icon: Icons.gastos, render: null, fuente: 'calculado sobre gastos',
         descripcion: 'Cuánto de tu costo es estructura y cuánto se mueve con la venta. Se calcula en vivo desde el tipo de cada gasto.' },
       { key: 'adm-pyg',       label: 'Pérdidas y Ganancias', icon: Icons.pedidos, render: null, fuente: 'calculado',
