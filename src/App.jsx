@@ -481,7 +481,7 @@ function LoginPage() {
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
-function Dashboard({ user }) {
+function Dashboard({ user, navOffset = 0 }) {
   const [config,setConfig]         = useState({meta_token:'',usd_rate:4200})
   const [adAccounts,setAdAccounts] = useState([])
   const [products,setProducts]     = useState([])
@@ -894,7 +894,7 @@ function Dashboard({ user }) {
       `}</style>
 
       {/* ── Sidebar ── */}
-      <aside style={{ width:SIDEBAR_W, minHeight:'100vh', background:'rgba(6,11,20,0.95)', backdropFilter:'blur(20px)', borderRight:`1px solid ${T.border}`, display:'flex', flexDirection:'column', position:'fixed', top:0, left:0, bottom:0, zIndex:100 }}>
+      <aside style={{ width:SIDEBAR_W, minHeight:'100vh', background:'rgba(6,11,20,0.95)', backdropFilter:'blur(20px)', borderRight:`1px solid ${T.border}`, display:'flex', flexDirection:'column', position:'fixed', top:0, left:navOffset, bottom:0, zIndex:100 }}>
         {/* Logo */}
         <div style={{ padding:'24px 20px 20px', borderBottom:`1px solid ${T.border}` }}>
           <div style={{ display:'flex', alignItems:'center', gap:12 }}>
@@ -942,7 +942,7 @@ function Dashboard({ user }) {
       </aside>
 
       {/* ── Main area ── */}
-      <div style={{ marginLeft:SIDEBAR_W, flex:1, display:'flex', flexDirection:'column', minHeight:'100vh' }}>
+      <div style={{ marginLeft:SIDEBAR_W + navOffset, flex:1, display:'flex', flexDirection:'column', minHeight:'100vh' }}>
 
         {/* Top bar */}
         <header style={{ background:'rgba(6,11,20,0.9)', backdropFilter:'blur(20px)', borderBottom:`1px solid ${T.border}`, padding:'0 28px', display:'flex', alignItems:'center', justifyContent:'space-between', height:58, position:'sticky', top:0, zIndex:50 }}>
@@ -1836,7 +1836,7 @@ function LabForm({ data, products, onClose, onSave }) {
 }
 
 // ─── Root ─────────────────────────────────────────────────────────────────────
-export default function App() {
+export default function App({ navOffset = 0 }) {
   const [session,setSession]=useState(null)
   const [loading,setLoading]=useState(true)
   useEffect(()=>{
@@ -1851,5 +1851,5 @@ export default function App() {
     </div>
   )
   if(!session) return <LoginPage />
-  return <Dashboard user={session.user} />
+  return <Dashboard user={session.user} navOffset={navOffset} />
 }
