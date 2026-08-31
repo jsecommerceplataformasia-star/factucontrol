@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { AuthProvider, useAuth } from './AuthProvider.jsx'
 import { modulesForRole, ROLE_LABEL, Icons } from './modules.jsx'
 
@@ -9,6 +9,8 @@ import { modulesForRole, ROLE_LABEL, Icons } from './modules.jsx'
 // ─────────────────────────────────────────────────────────────────────────
 
 export const RAIL_W = 56
+export const PANEL_W = 234
+export const SIDEBAR_W = RAIL_W + PANEL_W
 
 const T = {
   bg: '#060B14', panel: '#0A1120', panelSolid: '#0D1830',
@@ -137,26 +139,27 @@ function Pendiente({ modulo, item }) {
   )
 }
 
-// ─── Rail + menú desplegable ───────────────────────────────────────────────
+// ─── Rail + panel de submenú fijo ──────────────────────────────────────────
+// El panel de submenú queda SIEMPRE visible como segunda columna. Al hacer
+// clic en otro icono, el panel cambia de módulo, pero nunca se esconde.
 function Rail({ modulos, activeItem, onSelect, perfil, onSignOut }) {
-  const [abierto, setAbierto] = useState(null)   // key del módulo con flyout abierto
-  const cerrarTimer = useRef(null)
+  const moduloActivo = modulos.find(m => m.items.some(i => i.key === activeItem))
+  const [vista, setVista] = useState(moduloActivo?.key ?? modulos[0]?.key)
 
-  const abrir = (key) => { clearTimeout(cerrarTimer.current); setAbierto(key) }
-  const cerrarConRetraso = () => {
-    clearTimeout(cerrarTimer.current)
-    cerrarTimer.current = setTimeout(() => setAbierto(null), 160)
-  }
-  useEffect(() => () => clearTimeout(cerrarTimer.current), [])
+  // Si el módulo activo cambia por navegación (no por clic en el rail), el
+  // panel lo sigue para no quedar mostrando otro módulo.
+  useEffect(() => {
+    if (moduloActivo && moduloActivo.key !== vista) setVista(moduloActivo.key)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moduloActivo?.key])
 
-  const moduloAbierto = modulos.find(m => m.key === abierto)
-  const moduloActivo  = modulos.find(m => m.items.some(i => i.key === activeItem))
+  const moduloVisible = modulos.find(m => m.key === vista) || moduloActivo || modulos[0]
 
   return (
-    <div onMouseLeave={cerrarConRetraso}>
-      {/* Rail */}
+    <>
+      {/* Rail de iconos */}
       <nav style={{
-        position:'fixed', top:0, left:0, bottom:0, width:RAIL_W, zIndex:900,
+        position:'fixed', top:0, left:0, bottom:0, width:RAIL_W, zIndex:901,
         background:'rgba(6,11,20,0.97)', backdropFilter:'blur(20px)',
         borderRight:`1px solid ${T.border}`,
         display:'flex', flexDirection:'column', alignItems:'center', padding:'12px 0',
@@ -176,19 +179,18 @@ function Rail({ modulos, activeItem, onSelect, perfil, onSignOut }) {
           {modulos.map(m => {
             const ModIcon = m.icon
             const esActivo = moduloActivo?.key === m.key
-            const esAbierto = abierto === m.key
+            const esVista  = moduloVisible?.key === m.key
             return (
               <button
                 key={m.key}
                 className="portal-rail-btn"
                 title={m.label}
-                onMouseEnter={() => abrir(m.key)}
-                onClick={() => setAbierto(a => a === m.key ? null : m.key)}
+                onClick={() => setVista(m.key)}
                 style={{
                   width:38, height:38, borderRadius:10, border:'none', cursor:'pointer',
                   display:'flex', alignItems:'center', justifyContent:'center',
-                  background: esActivo || esAbierto ? T.accentBg : 'transparent',
-                  color: esActivo ? T.accent : esAbierto ? T.text : T.dim,
+                  background: esActivo || esVista ? T.accentBg : 'transparent',
+                  color: esActivo ? T.accent : esVista ? T.text : T.dim,
                   position:'relative',
                 }}
               >
@@ -213,37 +215,36 @@ function Rail({ modulos, activeItem, onSelect, perfil, onSignOut }) {
         </button>
       </nav>
 
-      {/* Flyout */}
-      {moduloAbierto && (
-        <div
-          onMouseEnter={() => abrir(moduloAbierto.key)}
+      {/* Panel de submenú — fijo, siempre visible */}
+      {moduloVisible && (
+        <aside
+          className="portal-scroll"
           style={{
-            position:'fixed', left:RAIL_W + 8, top:12, zIndex:899, width:270,
-            background:'rgba(13,24,48,0.98)', backdropFilter:'blur(24px)',
-            border:`1px solid ${T.border}`, borderRadius:16, padding:10,
-            boxShadow:'0 24px 60px rgba(0,0,0,0.55)', fontFamily:FONT,
-            animation:'portal-in .14s ease-out',
+            position:'fixed', left:RAIL_W, top:0, bottom:0, width:PANEL_W, zIndex:900,
+            background:'rgba(10,18,36,0.98)', backdropFilter:'blur(24px)',
+            borderRight:`1px solid ${T.border}`, padding:'14px 10px', overflowY:'auto',
+            fontFamily:FONT, boxSizing:'border-box',
           }}
         >
           {/* Encabezado del módulo */}
           <div style={{
-            display:'flex', alignItems:'center', gap:11, padding:'12px 12px 14px',
+            display:'flex', alignItems:'center', gap:11, padding:'8px 12px 14px',
             borderBottom:`1px solid ${T.borderSub}`, marginBottom:8,
           }}>
-            <span style={{ color:T.accent, display:'flex' }}><moduloAbierto.icon size={20} /></span>
-            <span style={{ fontSize:15, fontWeight:700, color:T.text }}>{moduloAbierto.label}</span>
+            <span style={{ color:T.accent, display:'flex' }}><moduloVisible.icon size={20} /></span>
+            <span style={{ fontSize:15, fontWeight:700, color:T.text }}>{moduloVisible.label}</span>
           </div>
 
           {/* Items */}
           <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
-            {moduloAbierto.items.map(item => {
+            {moduloVisible.items.map(item => {
               const ItemIcon = item.icon
               const activo = item.key === activeItem
               return (
                 <button
                   key={item.key}
                   className="portal-item"
-                  onClick={() => { onSelect(item.key); setAbierto(null) }}
+                  onClick={() => onSelect(item.key)}
                   style={{
                     display:'flex', alignItems:'center', gap:11, width:'100%', textAlign:'left',
                     padding:'10px 12px', borderRadius:9, border:'none', cursor:'pointer',
@@ -259,9 +260,9 @@ function Rail({ modulos, activeItem, onSelect, perfil, onSignOut }) {
               )
             })}
           </div>
-        </div>
+        </aside>
       )}
-    </div>
+    </>
   )
 }
 
@@ -288,7 +289,7 @@ function Shell() {
     return (
       <div style={{ minHeight:'100vh', background:T.bg, fontFamily:FONT }}>
         <ShellStyles />{rail}
-        <div style={{ marginLeft:RAIL_W, padding:'40px 32px', color:T.dim }}>
+        <div style={{ marginLeft:SIDEBAR_W, padding:'40px 32px', color:T.dim }}>
           Tu rol no tiene módulos asignados todavía.
         </div>
       </div>
@@ -299,7 +300,7 @@ function Shell() {
   // corra su barra lateral y su contenido, sin alterar su lógica.
   if (item.fullBleed && item.render) {
     const Comp = item.render
-    return <><ShellStyles />{rail}<Comp navOffset={RAIL_W} /></>
+    return <><ShellStyles />{rail}<Comp navOffset={SIDEBAR_W} /></>
   }
 
   const Comp = item.render
@@ -307,7 +308,7 @@ function Shell() {
     <div style={{ minHeight:'100vh', background:T.bg, fontFamily:FONT }}>
       <ShellStyles />
       {rail}
-      <div className="portal-scroll" style={{ marginLeft:RAIL_W, minHeight:'100vh' }}>
+      <div className="portal-scroll" style={{ marginLeft:SIDEBAR_W, minHeight:'100vh' }}>
         {Comp ? <Comp /> : <Pendiente modulo={modulo} item={item} />}
       </div>
     </div>
