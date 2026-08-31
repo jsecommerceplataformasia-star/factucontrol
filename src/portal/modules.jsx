@@ -9,6 +9,7 @@
 
 import FactucontrolApp from '../App.jsx'
 import { embed } from './Embed.jsx'
+import TorreControl from './screens/TorreControl.jsx'
 import RegistroGastos from './screens/RegistroGastos.jsx'
 import ImportarDatos from './screens/ImportarDatos.jsx'
 import DashboardFinanciero from './screens/DashboardFinanciero.jsx'
@@ -73,7 +74,7 @@ export const MODULES = [
     items: [
       // Tablero ya construido, embebido tal cual desde public/logistica/
       { key: 'log-torre',    label: 'Torre de Control',    icon: Icons.pauta,
-        render: embed('/logistica/torre-de-control.html', 'Torre de Control') },
+        render: TorreControl },
       { key: 'log-pedidos',  label: 'Órdenes por Entregar', icon: Icons.pedidos,    render: null, fuente: 'dropi_ordenes',
         descripcion: 'Seguimiento de lo que sigue en la calle: órdenes sin entregar, agrupadas por etiqueta de gestión, con descarga a CSV.' },
       { key: 'log-dinero',   label: 'Dinero y Flujo',      icon: Icons.gastos,      render: null, fuente: 'dropi_ordenes',

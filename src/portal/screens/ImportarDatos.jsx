@@ -150,7 +150,7 @@ function extraerDropi(filas) {
     id: j('ORDEN_ID','ID'), fecha: j('FECHA'), est: j('ESTATUS'), transp: j('TRANSPORTADORA'),
     depto: j('DEPARTAMENTO'), ciudad: j('CIUDAD'), tipo: j('TIPO DE ENVIO','TIPO_ENVIO'),
     total: j('TOTAL DE LA ORDEN','TOTAL_LINEA'), flete: j('PRECIO FLETE','PRECIO_FLETE'),
-    devol: j('COSTO DEVOLUCION','COSTO_DEVOLUCION'), prov: j('PRECIO PROVEEDOR','PRECIO_PROVEEDOR'),
+    devol: j('COSTO DEVOLUCION','COSTO_DEVOLUCION'), prov: j('PRECIO PROVEEDOR X CANTIDAD','PRECIO_PROVEEDOR'),
     cant: j('CANTIDAD'), nov: j('NOVEDAD'), novOk: j('FUE SOLUCIONADA','NOVEDAD_SOLUCIONADA'),
     fNov: j('FECHA DE NOVEDAD','FECHA_NOVEDAD'), fSol: j('FECHA DE SOLUCI','FECHA_SOLUCION'),
     fGuia: j('GUIA GENERADA','FECHA_GUIA'), fMov: j('ÚLTIMO MOVIMIENTO','ULTIMO_MOVIMIENTO'),
